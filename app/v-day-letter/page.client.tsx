@@ -79,7 +79,7 @@ export function VDayLetterPageClient() {
                 text: 'No, please, it really matters to me.',
                 twClassName: 'text-base h-9 px-3',
             },
-            imageUrl: '/cry-aniya.gif',
+            imageUrl: '/cry-anya.gif',
 
         },
         {
