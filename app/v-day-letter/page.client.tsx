@@ -117,7 +117,7 @@ export function VDayLetterPageClient() {
 
     return (
         <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:v-day-letter-bg">
-            <main className="flex min-h-screen w-full flex-col items-center justify-center gap-16 py-32 px-16 bg-white dark:v-day-letter-bg dark:text-gray-800">
+            <main className="flex min-h-screen w-full flex-col items-center justify-center gap-16 px-16 bg-white dark:v-day-letter-bg dark:text-gray-800">
                 <h2 className={`text-6xl text-pink-800 font-bold ${isSheSaidYes ? 'wiggle-once' : 'rotate-once'}`}>
                     {isSheSaidYes ?
                         'Knew You Gonna Say Yes. 😊'
@@ -139,7 +139,7 @@ export function VDayLetterPageClient() {
                     {/* Before She Said Yes */}
                     {
                         !isSheSaidYes &&
-                        <>
+                        <div className="flex flex-col lg:flex-row items-center-safe justify-center-safe gap-4">
                             {/* Yes Button */}
                             <Button
                                 variant={"success"}
@@ -154,7 +154,7 @@ export function VDayLetterPageClient() {
                                 handleNoClick={handleNoClick}
                                 isFlying={step >= btnSteps.length - 1}
                             />
-                        </>
+                        </div>
                     }
                     {/* After She Said Yes */}
                     {
