@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useLayoutEffect, useRef, useState } from "react";
 import confetti from 'canvas-confetti';
 import Image from 'next/image';
 import { AnimatePresence, motion } from "framer-motion";
@@ -26,7 +26,7 @@ export function VDayLetterPageClient() {
         {
             yes: {
                 text: 'Yes',
-                twClassName: 'text-3xl h-16 px-8',
+                twClassName: 'text-3xl h-16 px-8 sm:h-16 sm:px-8',
             },
             no: {
                 text: 'No',
@@ -37,7 +37,7 @@ export function VDayLetterPageClient() {
         {
             yes: {
                 text: 'Yes',
-                twClassName: 'text-6xl h-36 px-12',
+                twClassName: 'text-4xl sm:text-6xl h-20 px-8 sm:h-36 sm:px-12',
             },
             no: {
                 text: 'No, please.',
@@ -49,7 +49,7 @@ export function VDayLetterPageClient() {
         {
             yes: {
                 text: 'Yes',
-                twClassName: 'text-8xl h-48 px-16',
+                twClassName: 'text-5xl sm:text-8xl h-24 px-8 sm:h-48 sm:px-16',
             },
             no: {
                 text: "No, please don't refuse.",
@@ -61,7 +61,7 @@ export function VDayLetterPageClient() {
         {
             yes: {
                 text: 'Yes',
-                twClassName: 'text-8xl h-54 px-20',
+                twClassName: 'text-6xl sm:text-8xl h-28 px-8 sm:h-54 sm:px-20',
             },
             no: {
                 text: "No, I really hope you won't say no.",
@@ -73,7 +73,7 @@ export function VDayLetterPageClient() {
         {
             yes: {
                 text: 'Yes',
-                twClassName: 'text-8xl h-58 px-24',
+                twClassName: 'text-7xl sm:text-8xl h-30 px-8 sm:h-58 sm:px-24',
             },
             no: {
                 text: 'No, please, it really matters to me.',
@@ -85,7 +85,7 @@ export function VDayLetterPageClient() {
         {
             yes: {
                 text: 'Yes',
-                twClassName: 'text-8xl h-64 px-32',
+                twClassName: 'text-8xl sm:text-8xl h-36 px-8 sm:h-60 sm:px-24',
             },
             no: {
                 text: "Give me a chance?",
@@ -194,9 +194,28 @@ function NoButton({ text, twClassName, handleNoClick, isFlying }: NoButtonProps)
         })
     }
 
-    // Set initial random position
+    const updateInitPosition = useEffectEvent(() => {
+        if (isFlying) return
+        if (!ref.current) return
+
+        const rect = ref.current.getBoundingClientRect()
+
+        setPosition({
+            left: rect.left,
+            top: rect.top
+        })
+    })
+
     useEffect(() => {
-        handleRandomPosition()
+        // init
+        updateInitPosition()
+
+        // update init position when resize
+        window.addEventListener("resize", updateInitPosition);
+
+        return () => {
+            window.removeEventListener("resize", updateInitPosition);
+        };
     }, [])
 
     // Random flying
