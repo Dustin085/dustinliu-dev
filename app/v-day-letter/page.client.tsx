@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { useEffect, useEffectEvent, useLayoutEffect, useRef, useState } from "react";
+import React, { useEffect, useEffectEvent, useLayoutEffect, useRef, useState } from "react";
 import confetti from 'canvas-confetti';
 import Image from 'next/image';
 import { AnimatePresence, motion } from "framer-motion";
@@ -152,7 +152,8 @@ export function VDayLetterPageClient() {
                                 text={btnSteps[step].no.text}
                                 twClassName={btnSteps[step].no.twClassName}
                                 handleNoClick={handleNoClick}
-                                isFlying={step >= btnSteps.length - 1}
+                                // isFlying={step >= btnSteps.length - 1}
+                                shouldFly={step >= btnSteps.length - 1}
                             />
                         </div>
                     }
@@ -171,19 +172,21 @@ type NoButtonProps = {
     text: string,
     twClassName: string,
     handleNoClick: () => void,
-    isFlying: boolean,
+    shouldFly: boolean,
 }
 
-function NoButton({ text, twClassName, handleNoClick, isFlying }: NoButtonProps) {
+function NoButton({ text, twClassName, handleNoClick, shouldFly }: NoButtonProps) {
     const [position, setPosition] = useState({ top: 0, left: 0 })
-    const ref = useRef<HTMLButtonElement>(null)
+    const buttonRef = useRef<HTMLButtonElement>(null)
+    // 需要讓 NoButton 全權管理自己開始飛行的時機，以確保飛行開始位置的正確性
+    const [isFlying, setIsFlying] = useState(false)
     // Trigger for random flying
     const [trigger, setTrigger] = useState<number>(0);
 
     const handleRandomPosition = () => {
-        if (!ref.current) return
+        if (!buttonRef.current) return
 
-        const rect = ref.current.getBoundingClientRect()
+        const rect = buttonRef.current.getBoundingClientRect()
 
         const maxX = window.innerWidth - rect.width
         const maxY = window.innerHeight - rect.height
@@ -194,29 +197,23 @@ function NoButton({ text, twClassName, handleNoClick, isFlying }: NoButtonProps)
         })
     }
 
-    const updateInitPosition = useEffectEvent(() => {
-        if (isFlying) return
-        if (!ref.current) return
+    const startFlying = useEffectEvent(() => {
+        if (!buttonRef.current) return
 
-        const rect = ref.current.getBoundingClientRect()
+        const rect = buttonRef.current.getBoundingClientRect()
 
         setPosition({
             left: rect.left,
-            top: rect.top
+            top: rect.top,
         })
+
+        setIsFlying(true)
     })
 
     useEffect(() => {
-        // init
-        updateInitPosition()
-
-        // update init position when resize
-        window.addEventListener("resize", updateInitPosition);
-
-        return () => {
-            window.removeEventListener("resize", updateInitPosition);
-        };
-    }, [])
+        if (!shouldFly) return
+        startFlying()
+    }, [shouldFly])
 
     // Random flying
     useLayoutEffect(() => {
@@ -227,14 +224,21 @@ function NoButton({ text, twClassName, handleNoClick, isFlying }: NoButtonProps)
     return (
         <Button
             variant={"destructive"}
-            className={cn(twClassName, 'text-gray-800',
-                isFlying ? 'absolute' : '')}
-            style={{ top: position.top, left: position.left }}
+            className={cn(
+                twClassName,
+                'text-gray-800',
+                isFlying && 'absolute'
+            )}
+            style={
+                isFlying ?
+                    { top: position.top, left: position.left }
+                    : undefined
+            }
             onClick={() => {
                 handleNoClick();
                 setTrigger(prev => prev + 1)
             }}
-            ref={ref}
+            ref={buttonRef}
         >{text}</Button>
     )
 }
