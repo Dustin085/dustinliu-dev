@@ -19,3 +19,8 @@ export function debounce<T extends (...args: unknown[]) => void>(
     }, delay)
   }
 }
+
+export function normalizeToArray(value: unknown | unknown[] | undefined): unknown[] {
+  if (!value) return []
+  return Array.isArray(value) ? value : [value]
+}
