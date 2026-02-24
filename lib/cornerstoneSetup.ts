@@ -3,7 +3,6 @@ import {
     init as cs3DInit,
 } from '@cornerstonejs/core'
 import {
-    addTool,
     PanTool,
     ZoomTool,
     WindowLevelTool,
@@ -25,10 +24,12 @@ export function setupCornerstone() {
             await cs3DInit()
             await toolsInit()
             dicomImageLoader.init({ maxWebWorkers: 1 })
-
-            addTool(PanTool)
-            addTool(ZoomTool)
-            addTool(WindowLevelTool)
+            // imageLoadPoolManager.maxNumRequests = {
+            //     interaction: 40,
+            //     thumbnail: 2,
+            //     prefetch: 5, // 500張圖時，這個數字不要太大
+            //     compute: 1,    // <--- 這是保護 WebGL 不掛掉最重要的設定
+            // }
 
             console.log('Cornerstone 已初始化')
         })()
