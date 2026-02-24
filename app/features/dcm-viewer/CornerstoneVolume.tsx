@@ -16,10 +16,13 @@ import {
     Layers,
     RotateCcw,
     Activity,
+    Locate,
 } from 'lucide-react'
 import { setupCornerstone } from '@/lib/cornerstoneSetup'
 import { ViewportPanel } from '@/app/features/dcm-viewer/components/ViewportPanel'
 import { ToolButton } from '@/app/features/dcm-viewer/components/ToolButton'
+import { createVOISynchronizer } from '@cornerstonejs/tools/synchronizers'
+import { SynchronizerManager } from '@cornerstonejs/tools'
 
 const { RenderingEngine, volumeLoader, Enums, cache } = cornerstone
 const { ViewportType, OrientationAxis } = Enums
@@ -29,6 +32,7 @@ const {
     LengthTool,
     PanTool,
     ZoomTool,
+    CrosshairsTool,
     ToolGroupManager,
     Enums: ToolEnums,
 } = cornerstoneTools
@@ -44,8 +48,12 @@ const VIEWPORT_IDS = {
     CORONAL: 'CORONAL',
 }
 
+const SYNC_IDS = {
+    VOISYNC: 'voiSync'
+}
+
 // 啟用工具
-type ActiveTool = 'windowLevel' | 'length' | 'pan' | 'zoom'
+type ActiveTool = 'windowLevel' | 'length' | 'pan' | 'zoom' | 'crosshairs'
 
 // 將工具名轉換成 cornerstone 使用的 toolName
 const TOOL_NAME_MAP: Record<ActiveTool, string> = {
@@ -53,6 +61,7 @@ const TOOL_NAME_MAP: Record<ActiveTool, string> = {
     length: LengthTool.toolName,
     pan: PanTool.toolName,
     zoom: ZoomTool.toolName,
+    crosshairs: CrosshairsTool.toolName
 }
 
 async function prefetchMetadata(imageId: string) {
@@ -78,6 +87,12 @@ export function CornerstoneVolume() {
         const run = async () => {
             // cornerstone init
             await setupCornerstone()
+
+            // 確認所有 ref 都已掛載
+            if (!axialRef.current || !sagittalRef.current || !coronalRef.current) {
+                console.error('Viewport elements not ready')
+                return
+            }
 
             // 定義 render engine 與 viewports
             const engine = new RenderingEngine(RENDERING_ENGINE_ID)
@@ -113,13 +128,26 @@ export function CornerstoneVolume() {
                 },
             ])
 
+            // VOI = Value of Interest，也就是 WW/WL
+            // syncInvertState 代表要同步反色，syncColormap 代表同步套用 colorMap
+            SynchronizerManager.destroySynchronizer(SYNC_IDS.VOISYNC)
+            const voiSynchronizer = createVOISynchronizer(SYNC_IDS.VOISYNC,
+                { syncInvertState: false, syncColormap: false })
+
+            Object.values(VIEWPORT_IDS).forEach((id) => {
+                voiSynchronizer.add({
+                    renderingEngineId: RENDERING_ENGINE_ID,
+                    viewportId: id,
+                })
+            })
+
             // 建立工具群組
             ToolGroupManager.destroyToolGroup(TOOL_GROUP_ID) // async run() 導致 cleanup 的 destroy 在 toolGroup 實際建立前就執行，Strict Mode 第二次 mount 時需手動 destroy 確保乾淨重建
             const toolGroup = ToolGroupManager.createToolGroup(TOOL_GROUP_ID)
             if (!toolGroup) throw Error('Tool group create failed.')
 
                 // 全域註冊工具
-                ;[WindowLevelTool, StackScrollTool, LengthTool, PanTool, ZoomTool].forEach(
+                ;[WindowLevelTool, StackScrollTool, LengthTool, PanTool, ZoomTool, CrosshairsTool].forEach(
                     (tool) => cornerstoneTools.addTool(tool)
                 )
                 // 將工具加進 tool group
@@ -129,6 +157,7 @@ export function CornerstoneVolume() {
                     LengthTool.toolName,
                     PanTool.toolName,
                     ZoomTool.toolName,
+                    CrosshairsTool.toolName,
                 ].forEach((name) => toolGroup.addTool(name))
 
             // Tool 的狀態有以下：
@@ -149,6 +178,8 @@ export function CornerstoneVolume() {
                 bindings: [{ mouseButton: ToolEnums.MouseBindings.Wheel }],
             })
             toolGroup.setToolPassive(LengthTool.toolName)
+            // 設定 CrosshairsTool passive 時會嘗試讀取 viewports，此時若 viewports 還沒有 volume，就會炸
+            // toolGroup.setToolPassive(CrosshairsTool.toolName)
 
             // 將工具加入到 viewport
             Object.values(VIEWPORT_IDS).forEach((id) =>
@@ -160,6 +191,7 @@ export function CornerstoneVolume() {
 
         // cleanup
         return () => {
+            SynchronizerManager.destroySynchronizer(SYNC_IDS.VOISYNC)
             ToolGroupManager.destroyToolGroup(TOOL_GROUP_ID)
             engineRef.current?.destroy()
         }
@@ -173,8 +205,10 @@ export function CornerstoneVolume() {
 
         const primary = ToolEnums.MouseBindings.Primary
 
-            // 全部先設為 Passive
-            ;[WindowLevelTool, LengthTool, PanTool, ZoomTool].forEach((t) =>
+            // 全部先設為 Passive，setToolPassive 只清除左鍵
+            // setToolPassive(PanTool.toolName, { removeAllBindings: true }) 才會清除所有 bindings
+            // https://www.cornerstonejs.org/docs/api/tools/namespaces/types/classes/itoolgroup/#settoolpassive
+            ;[WindowLevelTool, LengthTool, PanTool, ZoomTool, CrosshairsTool].forEach((t) =>
                 toolGroup.setToolPassive(t.toolName)
             )
 
@@ -191,6 +225,7 @@ export function CornerstoneVolume() {
             const vp = engine.getViewport(id) as cornerstone.Types.IVolumeViewport
             vp?.resetCamera()
         })
+        // 觸發渲染
         engine.renderViewports(Object.values(VIEWPORT_IDS))
     }, [])
 
@@ -204,6 +239,7 @@ export function CornerstoneVolume() {
         setFileCount(files.length)
 
         try {
+            // 清除舊快取
             cache.purgeCache()
 
             const imageIds: string[] = []
@@ -224,6 +260,22 @@ export function CornerstoneVolume() {
                     return vp.setVolumes([{ volumeId: VOLUME_ID }])
                 })
             )
+
+            // volume 載入完成後才設 CrosshairsTool 初始狀態
+            const toolGroup = ToolGroupManager.getToolGroup(TOOL_GROUP_ID)
+            toolGroup?.setToolPassive(CrosshairsTool.toolName)
+
+            // volume 載入完成後，拿到 tool instance 再設顏色
+            const crosshairsTool = toolGroup?.getToolInstance(CrosshairsTool.toolName) as cornerstoneTools.CrosshairsTool
+
+            crosshairsTool._getReferenceLineColor = (viewportId: string) => {
+                const colorMap: Record<string, string> = {
+                    [VIEWPORT_IDS.AXIAL]: 'rgb(255, 100, 100)',
+                    [VIEWPORT_IDS.SAGITTAL]: 'rgb(100, 255, 100)',
+                    [VIEWPORT_IDS.CORONAL]: 'rgb(100, 100, 255)',
+                }
+                return colorMap[viewportId] ?? 'white'
+            }
 
             engine.renderViewports(Object.values(VIEWPORT_IDS))
             setStatus('ready')
@@ -305,6 +357,13 @@ export function CornerstoneVolume() {
                         disabled={!isLoaded}
                     />
                     <ToolButton
+                        icon={<Locate className="h-4 w-4" />}
+                        label="Crosshairs  [左鍵]"
+                        active={activeTool === 'crosshairs'}
+                        onClick={() => switchTool('crosshairs')}
+                        disabled={!isLoaded}
+                    />
+                    <ToolButton
                         icon={<Ruler className="h-4 w-4" />}
                         label="Length Tool  [左鍵]"
                         active={activeTool === 'length'}
@@ -356,7 +415,7 @@ export function CornerstoneVolume() {
                         <ViewportPanel label="CORONAL" divRef={coronalRef} className="flex-1" />
 
                         {/* 右下：操作說明 / 空狀態 */}
-                        <div className="flex-1 border border-zinc-700 bg-zinc-950 flex flex-col items-center justify-center gap-3 p-6">
+                        <div className="flex-1 border border-zinc-700 bg-zinc-950 flex flex-col items-center justify-center gap-3">
                             {status === 'idle' && (
                                 <>
                                     <Upload className="h-8 w-8 text-zinc-700" />
@@ -387,7 +446,7 @@ export function CornerstoneVolume() {
                                 </>
                             )}
                             {status === 'ready' && (
-                                <div className="text-zinc-600 text-xs tracking-wider space-y-2 text-left w-full max-w-xs">
+                                <div className="text-zinc-600 text-xs flex flex-col items-center justify-center tracking-wider space-y-2 text-left w-full max-w-xs">
                                     <p className="text-zinc-400 mb-3">MOUSE BINDINGS</p>
                                     <p>LEFT DRAG — Active Tool</p>
                                     <p>MIDDLE DRAG — Pan</p>

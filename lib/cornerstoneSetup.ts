@@ -24,7 +24,7 @@ export function setupCornerstone() {
         initPromise = (async () => {
             await cs3DInit()
             await toolsInit()
-            await dicomImageLoader.init({ maxWebWorkers: 1 })
+            dicomImageLoader.init({ maxWebWorkers: 1 })
 
             addTool(PanTool)
             addTool(ZoomTool)
