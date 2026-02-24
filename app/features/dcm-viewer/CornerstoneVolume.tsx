@@ -23,6 +23,7 @@ import { ViewportPanel } from '@/app/features/dcm-viewer/components/ViewportPane
 import { ToolButton } from '@/app/features/dcm-viewer/components/ToolButton'
 import { createVOISynchronizer } from '@cornerstonejs/tools/synchronizers'
 import { SynchronizerManager } from '@cornerstonejs/tools'
+import { getValidatedMetadata } from '@/app/features/dcm-viewer/hooks/getValidatedMetadata'
 
 const { RenderingEngine, volumeLoader, Enums, cache } = cornerstone
 const { ViewportType, OrientationAxis } = Enums
@@ -64,9 +65,9 @@ const TOOL_NAME_MAP: Record<ActiveTool, string> = {
     crosshairs: CrosshairsTool.toolName
 }
 
-async function prefetchMetadata(imageId: string) {
-    await dicomImageLoader.wadouri.loadImage(imageId).promise
-}
+// async function prefetchMetadata(imageId: string) {
+//     await dicomImageLoader.wadouri.loadImage(imageId).promise
+// }
 
 
 // 主元件
@@ -81,6 +82,14 @@ export function CornerstoneVolume() {
     const [progress, setProgress] = useState({ current: 0, total: 0 })
     const [activeTool, setActiveTool] = useState<ActiveTool>('windowLevel')
     const [fileCount, setFileCount] = useState(0)
+    const [dicomMetadata, setDicomMetadata] = useState<{
+        patientName: string
+        patientId: string
+        studyDate: string
+        modality: string
+        seriesDescription: string
+        sliceThickness: string
+    } | null>(null)
 
     // Cornerstone 初始化
     useEffect(() => {
@@ -245,8 +254,31 @@ export function CornerstoneVolume() {
             const imageIds: string[] = []
             for (let i = 0; i < files.length; i++) {
                 const imageId = dicomImageLoader.wadouri.fileManager.add(files[i])
-                await prefetchMetadata(imageId)
+                await dicomImageLoader.wadouri.loadImage(imageId).promise
                 imageIds.push(imageId)
+
+                // 只從第一張讀 metadata（整個 series 的病人資訊都一樣）
+                if (i === 0) {
+                    // 使用 safeParse
+                    const result = getValidatedMetadata(imageId)
+
+                    if (!result.success) {
+                        console.warn('Invalid DICOM metadata', result.error)
+                    } else {
+                        const dicom = result.data
+                        console.log('Validated metadata', dicom)
+                    }
+
+                    setDicomMetadata({
+                        patientName: result.data?.PatientName ?? 'N/A',
+                        patientId: result.data?.PatientID ?? 'N/A',
+                        studyDate: result.data?.StudyDate?.toLocaleDateString() ?? 'N/A',
+                        modality: result.data?.Modality ?? 'N/A',
+                        seriesDescription: result.data?.SeriesDescription ?? 'N/A',
+                        sliceThickness: String(result.data?.SliceThickness) ?? 'N/A',
+                    })
+                }
+
                 setProgress({ current: i + 1, total: files.length })
             }
 
@@ -445,13 +477,21 @@ export function CornerstoneVolume() {
                                     </p>
                                 </>
                             )}
-                            {status === 'ready' && (
-                                <div className="text-zinc-600 text-xs flex flex-col items-center justify-center tracking-wider space-y-2 text-left w-full max-w-xs">
-                                    <p className="text-zinc-400 mb-3">MOUSE BINDINGS</p>
-                                    <p>LEFT DRAG — Active Tool</p>
-                                    <p>MIDDLE DRAG — Pan</p>
-                                    <p>RIGHT DRAG — Zoom</p>
-                                    <p>SCROLL — Slice Navigation</p>
+                            {status === 'ready' && dicomMetadata && (
+                                <div className="text-xs font-mono w-full h-full p-4 space-y-1">
+                                    <p className="text-zinc-400 tracking-widest mb-3">PATIENT INFO</p>
+                                    <p><span className="text-zinc-600">NAME</span> <span className="text-zinc-300">{dicomMetadata.patientName}</span></p>
+                                    <p><span className="text-zinc-600">ID</span> <span className="text-zinc-300">{dicomMetadata.patientId}</span></p>
+                                    <p><span className="text-zinc-600">DATE</span> <span className="text-zinc-300">{dicomMetadata.studyDate}</span></p>
+                                    <p><span className="text-zinc-600">MODALITY</span> <span className="text-zinc-300">{dicomMetadata.modality}</span></p>
+                                    <p><span className="text-zinc-600">SERIES</span> <span className="text-zinc-300">{dicomMetadata.seriesDescription}</span></p>
+                                    <p><span className="text-zinc-600">THICKNESS</span> <span className="text-zinc-300">{dicomMetadata.sliceThickness} mm</span></p>
+                                    <Separator className="bg-zinc-800 my-3" />
+                                    <p className="text-zinc-400 tracking-widest mb-3">MOUSE BINDINGS</p>
+                                    <p className="text-zinc-600">LEFT — Active Tool</p>
+                                    <p className="text-zinc-600">MIDDLE — Pan</p>
+                                    <p className="text-zinc-600">RIGHT — Zoom</p>
+                                    <p className="text-zinc-600">SCROLL — Slice</p>
                                 </div>
                             )}
                             {status === 'error' && (
