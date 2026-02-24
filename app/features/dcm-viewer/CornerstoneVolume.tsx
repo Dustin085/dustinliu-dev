@@ -13,10 +13,10 @@ import {
     SunMedium,
     Hand,
     ZoomIn,
-    Layers,
     RotateCcw,
     Activity,
     Locate,
+    Delete,
 } from 'lucide-react'
 import { setupCornerstone } from '@/lib/cornerstoneSetup'
 import { ViewportPanel } from '@/app/features/dcm-viewer/components/ViewportPanel'
@@ -226,6 +226,38 @@ export function CornerstoneVolume() {
         toolGroup.setToolActive(toolName, { bindings: [{ mouseButton: primary }] })
     }, [])
 
+    // 刪除被選中的標記
+    const removeSelectedAnnotations = () => {
+        const engine = engineRef.current
+        if (!engine) return
+        const annotation = cornerstoneTools.annotation;
+        console.log(annotation.selection.getAnnotationsSelected())
+        const selectedAnnos = annotation.selection.getAnnotationsSelected()
+        selectedAnnos.forEach(an => {
+            annotation.state.removeAnnotation(an)
+        })
+
+        // 清空選取狀態
+        cornerstoneTools.annotation.selection.deselectAnnotation();
+
+        // 更新畫面
+        engine.renderViewports(Object.values(VIEWPORT_IDS))
+    }
+
+    // 綁定刪除按鍵
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === "Delete" || e.key === "Backspace") {
+                removeSelectedAnnotations();
+            }
+        };
+
+        window.addEventListener("keydown", handleKeyDown);
+        return () => {
+            window.removeEventListener("keydown", handleKeyDown);
+        };
+    }, []);
+
     // 重設視角
     const resetViewports = useCallback(() => {
         const engine = engineRef.current
@@ -282,7 +314,7 @@ export function CornerstoneVolume() {
                 setProgress({ current: i + 1, total: files.length })
             }
 
-            const volume = await volumeLoader.createAndCacheVolume(VOLUME_ID, { imageIds })
+            const volume = await volumeLoader.createAndCacheVolume(VOLUME_ID, { imageIds, progressiveRendering: true })
             volume.load()
 
             const engine = engineRef.current!
@@ -420,10 +452,10 @@ export function CornerstoneVolume() {
                     <Separator className="bg-zinc-800 my-1" />
 
                     <ToolButton
-                        icon={<Layers className="h-4 w-4" />}
-                        label="Scroll Slices  [滾輪]"
-                        onClick={() => { }}
-                        disabled
+                        icon={<Delete className="h-4 w-4" />}
+                        label="刪除標籤  [Delete]"
+                        onClick={() => { removeSelectedAnnotations() }}
+                        disabled={!isLoaded}
                     />
                     <ToolButton
                         icon={<RotateCcw className="h-4 w-4" />}
@@ -492,6 +524,7 @@ export function CornerstoneVolume() {
                                     <p className="text-zinc-600">MIDDLE — Pan</p>
                                     <p className="text-zinc-600">RIGHT — Zoom</p>
                                     <p className="text-zinc-600">SCROLL — Slice</p>
+                                    <p className="text-zinc-600">DELETE — Remove Annotation</p>
                                 </div>
                             )}
                             {status === 'error' && (
