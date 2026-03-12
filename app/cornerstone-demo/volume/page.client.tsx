@@ -3,7 +3,7 @@
 import dynamic from 'next/dynamic'
 
 const CornerstoneVolume = dynamic(
-    () => import('@/app/features/dcm-viewer/CornerstoneVolume').then(
+    () => import('@/features/dcm-viewer/CornerstoneVolume').then(
         (mod) => mod.CornerstoneVolume
     ),
     { ssr: false }

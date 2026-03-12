@@ -20,7 +20,7 @@ import {
 
 import { IToolGroup } from '@cornerstonejs/tools/types'
 import { createViewerToolGroup, setupCornerstone } from '@/lib/cornerstoneSetup'
-import { DEFAULT_WINDOW_PRESETS, WindowPreset } from '@/app/features/dcm-viewer/constants'
+import { DEFAULT_WINDOW_PRESETS, WindowPreset } from '@/features/dcm-viewer/constants'
 import { normalizeToArray } from '@/lib/utils'
 
 addTool(PanTool)

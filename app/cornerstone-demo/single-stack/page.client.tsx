@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic'
 // import { CornerstoneViewer } from "@/app/features/dcm-viewer/CornerstoneViewer"
 
 const CornerstoneViewer = dynamic(
-    () => import('@/app/features/dcm-viewer/CornerstoneViewer').then(
+    () => import('@/features/dcm-viewer/CornerstoneViewer').then(
         (mod) => mod.CornerstoneViewer
     ),
     { ssr: false }

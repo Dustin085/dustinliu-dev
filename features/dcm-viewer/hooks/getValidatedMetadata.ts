@@ -1,4 +1,4 @@
-import { DicomMetadataSchema } from '@/app/features/dcm-viewer/schema'
+import { DicomMetadataSchema } from '@/features/dcm-viewer/schema'
 import * as cornerstone from '@cornerstonejs/core'
 
 export function getValidatedMetadata(imageId: string) {

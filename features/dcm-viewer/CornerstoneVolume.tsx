@@ -19,11 +19,11 @@ import {
     Delete,
 } from 'lucide-react'
 import { setupCornerstone } from '@/lib/cornerstoneSetup'
-import { ViewportPanel } from '@/app/features/dcm-viewer/components/ViewportPanel'
-import { ToolButton } from '@/app/features/dcm-viewer/components/ToolButton'
+import { ViewportPanel } from '@/features/dcm-viewer/components/ViewportPanel'
+import { ToolButton } from '@/features/dcm-viewer/components/ToolButton'
 import { createVOISynchronizer } from '@cornerstonejs/tools/synchronizers'
 import { SynchronizerManager } from '@cornerstonejs/tools'
-import { getValidatedMetadata } from '@/app/features/dcm-viewer/hooks/getValidatedMetadata'
+import { getValidatedMetadata } from '@/features/dcm-viewer/hooks/getValidatedMetadata'
 
 const { RenderingEngine, volumeLoader, Enums, cache } = cornerstone
 const { ViewportType, OrientationAxis } = Enums
@@ -272,6 +272,7 @@ export function CornerstoneVolume() {
 
     // 檔案上傳
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        // 取得 File 物件（硬碟上的檔案參考）
         const files = Array.from(e.target.files || [])
         if (!files.length) return
 
@@ -285,7 +286,12 @@ export function CornerstoneVolume() {
 
             const imageIds: string[] = []
             for (let i = 0; i < files.length; i++) {
+
+                // 建立存取通道（門牌），還沒有讀取資料
                 const imageId = dicomImageLoader.wadouri.fileManager.add(files[i])
+
+                // 拿著門牌去記憶體取資料，解析 DICOM header + 解碼像素，寫入 metadata 快取
+                // 要產生 volume ，需要先讀取過每一張 DICOM 的資料
                 await dicomImageLoader.wadouri.loadImage(imageId).promise
                 imageIds.push(imageId)
 
