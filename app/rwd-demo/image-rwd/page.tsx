@@ -1,26 +1,8 @@
-import { Metadata } from 'next';
 import Image from 'next/image';
 
-export const metadata: Metadata = {
-  title: 'Rwd Demo',
-  description: 'Making some good RWD layout.',
-};
-
-export default function RWDDemoPage() {
+export default function ImageRwdPage() {
   return (
     <main className="min-h-screen max-w-6xl mx-auto px-4 py-4 flex flex-col gap-6 items-center">
-      {/* 6 squares section */}
-      <section className="w-full grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <div
-            key={i}
-            className="bg-gray-500 aspect-square flex items-center justify-center text-white text-xl"
-          >
-            {i + 1}
-          </div>
-        ))}
-      </section>
-
       {/* RWD image */}
       <section className="w-full flex flex-col md:flex-row items-center gap-4">
         {/* 圖片容器 */}

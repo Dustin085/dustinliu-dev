@@ -1,44 +1,51 @@
+import { DropdownMenuLink } from '@/app/rwd-demo/components/dropdown-menu-btn';
+import { NavbarLink } from '@/app/rwd-demo/components/navbar-link';
+import { RWD_DEMO_ROUTES } from '@/app/rwd-demo/routes';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import Link from 'next/link';
+import { Menu } from 'lucide-react';
 
-export default function Layout() {
+export default function Layout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   return (
-    <header className="bg-gray-800 text-gray-300">
-      <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-        {/* Logo */}
-        <h1 className="font-bold">Logo</h1>
-        {/* Navbar */}
-        <nav className="hidden md:flex items-center justify-center gap-4">
-          <Link href={'./'}>Home</Link>
-          <Link href={'./'}>About</Link>
-          <Link href={'./'}>Contact</Link>
-        </nav>
-        {/* Mobile Button */}
-        <div className="md:hidden">
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline">☰</Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent>
-              <DropdownMenuItem>
-                <Link href={'./'}>Home</Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Link href={'./'}>About</Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <Link href={'./'}>Contact</Link>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+    <>
+      <header className="bg-gray-800 text-gray-300">
+        <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+          {/* Logo */}
+          <h1 className="font-bold">Logo</h1>
+          {/* Navbar */}
+          <nav className="hidden md:flex items-center justify-center gap-4">
+            {RWD_DEMO_ROUTES.map((route) => {
+              return (
+                <NavbarLink key={route.href} route={route} />
+              );
+            })}
+          </nav>
+          {/* Mobile Button */}
+          <div className="md:hidden">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline">
+                  <Menu className="w-5 h-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                {RWD_DEMO_ROUTES.map((route) => {
+                  return <DropdownMenuLink key={route.href} route={route} />;
+                })}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
-      </div>
-    </header>
+      </header>
+      {children}
+    </>
   );
 }
