@@ -11,7 +11,7 @@ export function NavbarLink({ route }: { route: ROUTE }) {
     if (path === BASE_ROUTE) {
       return pathname === BASE_ROUTE;
     }
-    return pathname.startsWith(path);
+    return pathname === path || pathname.startsWith(path + '/');
   };
 
   return (

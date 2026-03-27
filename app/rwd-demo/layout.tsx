@@ -1,4 +1,4 @@
-import { DropdownMenuLink } from '@/app/rwd-demo/components/dropdown-menu-btn';
+import { DropdownMenuLink } from '@/app/rwd-demo/components/dropdown-menu-link';
 import { NavbarLink } from '@/app/rwd-demo/components/navbar-link';
 import { RWD_DEMO_ROUTES } from '@/app/rwd-demo/routes';
 import { Button } from '@/components/ui/button';
